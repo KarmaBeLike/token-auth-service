@@ -3,9 +3,13 @@ package main
 import (
 	"database/sql"
 	"log"
+	"net/http"
 
 	"github.com/KarmaBeLike/token-auth-service/config"
 	"github.com/KarmaBeLike/token-auth-service/internal/database"
+	"github.com/KarmaBeLike/token-auth-service/internal/handlers"
+	"github.com/KarmaBeLike/token-auth-service/internal/repository"
+	"github.com/KarmaBeLike/token-auth-service/internal/service"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -46,4 +50,20 @@ func main() {
 	defer db.Close()
 
 	runMigrations(db)
+
+	userRepo := &repository.UserRepo{DB: db}
+	userService := &service.UserService{Repository: *userRepo}
+
+	// Создание обработчиков
+	userHandler := &handlers.UserHandler{UserService: userService}
+
+	// Маршруты
+	http.HandleFunc("/register", userHandler.RegisterUser)
+	http.HandleFunc("/login", userHandler.LoginUser)
+
+	// Запуск сервера
+	log.Println("Starting server on :8080...")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("Server failed: %v", err)
+	}
 }
